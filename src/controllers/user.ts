@@ -1,10 +1,9 @@
-import type { Request, Response } from 'express';
+import type {NextFunction, Request, Response} from 'express';
 import {ApiResponse} from "../utils/apiResponse.ts";
-import {ApiError} from "../utils/apiError.ts";
 import AuthService from '../services/auth.ts';
 import type {LoginDTO} from "../types/auth.ts";
 
-async function registerUser(req: Request, res: Response) {
+async function registerUser(req: Request, res: Response, next: NextFunction) {
     const {username, email, password} = req.body;
 
     try {
@@ -12,11 +11,11 @@ async function registerUser(req: Request, res: Response) {
         return res.status(201).json(new ApiResponse(201, userdata, "User registered successfully"));
     } catch (error) {
         console.log("Error: ", error);
-        // return res.status(400).json(new ApiError(400, "Something went wrong"));
+        next(error);
     }
 }
 
-async function loginUser(req: Request, res: Response) {
+async function loginUser(req: Request, res: Response, next: NextFunction) {
     const {email, password}: LoginDTO = req.body;
 
     try {
@@ -24,7 +23,7 @@ async function loginUser(req: Request, res: Response) {
         return res.status(201).json(new ApiResponse(201, userdata, "User logged in successfully"));
     } catch (error) {
         console.log("Error: ", error);
-        return res.status(400).json(new ApiError(400, "Something went wrong"));
+        next(error);
     }
 }
 

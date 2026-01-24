@@ -1,4 +1,5 @@
 import express from "express";
+import {errorHandler} from "./middlewares/errorHandler.ts";
 import authenticateToken, {type AuthRequest} from "./middlewares/auth.ts";
 
 const app = express();
@@ -22,5 +23,7 @@ app.get('/api/v1/profile', (req: AuthRequest, res) => {
         "yourData": req.user
     });
 });
+
+app.use(errorHandler);
 
 export default app;
