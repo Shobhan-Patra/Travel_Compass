@@ -9,14 +9,8 @@ export class ApiError extends Error {
         errors?: unknown
     ) {
         super(message);
-
-        // Required when extending Error in TypeScript
-        Object.setPrototypeOf(this, new.target.prototype);
-
         this.name = "ApiError";
         this.statusCode = statusCode;
         this.errors = errors;
-
-        Error.captureStackTrace(this, this.constructor);
     }
 }
