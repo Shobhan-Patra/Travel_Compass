@@ -9,10 +9,11 @@ const pool = new Pool({
 
 const createUsersTable = `
     CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     email varchar(255) UNIQUE NOT NULL,
     username varchar(255) NOT NULL,
-    password varchar(255) NOT NULL                                   
+    password varchar(255) NOT NULL,
+    refreshtoken varchar(255) DEFAULT NULL
 )`
 
 export async function initDB() {
