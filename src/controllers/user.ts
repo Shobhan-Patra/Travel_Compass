@@ -7,7 +7,7 @@ async function registerUser(req: Request, res: Response, next: NextFunction) {
     const {username, email, password} = req.body;
 
     try {
-        const userdata = await AuthService.register(username, email, password);
+        const userdata = await AuthService.register({username, email, password});
         return res.status(201).json(new ApiResponse(201, userdata, "User registered successfully"));
     } catch (error) {
         console.log("Error: ", error);
@@ -27,7 +27,21 @@ async function loginUser(req: Request, res: Response, next: NextFunction) {
     }
 }
 
+async function refreshToken(req: Request, res: Response, next: NextFunction) {
+    const {token} = req.body;
+
+    try {
+        const userData = await AuthService.refreshToken(token);
+        return res.status(200).json(new ApiResponse(200, userData, "User token refresh successfully"));
+    }
+    catch (error) {
+        console.log("Error: ", error);
+        next(error);
+    }
+}
+
 export {
     registerUser,
-    loginUser
+    loginUser,
+    refreshToken
 }

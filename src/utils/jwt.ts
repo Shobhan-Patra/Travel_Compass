@@ -1,22 +1,23 @@
-import jwt from "jsonwebtoken";
+import jwt, {type Secret, type SignOptions } from "jsonwebtoken";
 import type {JwtPayload} from "../types/auth.ts";
 
-const JWT_SECRET = process.env.JWT_SECRET!;
-const JWT_EXPIRES_IN = "30m";
+const JWT_ACCESS_KEY_SECRET: Secret = process.env.JWT_ACCESS_KEY_SECRET!;
+const JWT_ACCESS_KEY_EXPIRY: SignOptions["expiresIn"] = process.env.JWT_ACCESS_KEY_EXPIRY! as SignOptions["expiresIn"];
+const JWT_REFRESH_KEY_SECRET: Secret = process.env.JWT_REFRESH_KEY_SECRET!;
+const JWT_REFRESH_KEY_EXPIRY: SignOptions["expiresIn"] = process.env.JWT_REFRESH_KEY_EXPIRY! as SignOptions["expiresIn"];
 
-export function generateToken(payload: JwtPayload): string {
-    return jwt.sign(payload, JWT_SECRET, {expiresIn: JWT_EXPIRES_IN});
+export function generateAccessToken(payload: JwtPayload): string {
+    return jwt.sign(payload, JWT_ACCESS_KEY_SECRET, {expiresIn: JWT_ACCESS_KEY_EXPIRY});
 }
 
-export function verifyToken(token: string): JwtPayload {
-    if (!token) {
-        throw new Error("Token is required");
-    }
+export function generateRefreshToken(payload: JwtPayload): string {
+    return jwt.sign(payload, JWT_REFRESH_KEY_SECRET, {expiresIn: JWT_REFRESH_KEY_EXPIRY});
+}
 
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-        return decoded;
-    } catch (error) {
-        throw new Error("Token is not valid");
-    }
+export function verifyAccessToken(token: string): JwtPayload {
+    return jwt.verify(token, JWT_ACCESS_KEY_SECRET) as JwtPayload;
+}
+
+export function verifyRefreshToken(token: string): JwtPayload {
+    return jwt.verify(token, JWT_REFRESH_KEY_SECRET) as JwtPayload;
 }
