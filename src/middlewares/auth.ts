@@ -1,6 +1,7 @@
 import type {NextFunction, Request, Response} from "express";
 import {ApiError} from "../utils/apiError.ts";
-import {verifyToken} from "../utils/jwt.ts";
+import {verifyAccessToken, verifyRefreshToken} from "../utils/jwt.ts";
+import pool from "../db/db.ts";
 
 export interface AuthRequest extends Request {
     user?: any;
@@ -11,16 +12,16 @@ const authenticateToken = async (req: AuthRequest, res: Response, next: NextFunc
     const token = authHeader?.split(' ')[1];
 
     if (!token) {
-        return new ApiError(404, "No token provided");
+        return next(new ApiError(404, "No token provided"));
     }
 
     try {
-        const decodedToken = verifyToken(token);
-        req.user = decodedToken;
-        console.log("Req made by:", decodedToken);
+        const decodedAccessToken = verifyAccessToken(token);
+        req.user = decodedAccessToken;
+        console.log("Req made by:", decodedAccessToken);
         next();
     } catch (error) {
-        throw new ApiError(401, "Unauthorized, Invalid Token");
+        return next(new ApiError(403, "Unauthorized, Invalid Token"));
     }
 }
 
