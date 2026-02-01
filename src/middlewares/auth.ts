@@ -1,24 +1,22 @@
 import type {NextFunction, Request, Response} from "express";
 import {ApiError} from "../utils/apiError.ts";
-import {verifyAccessToken, verifyRefreshToken} from "../utils/jwt.ts";
-import pool from "../db/db.ts";
+import {verifyAccessToken} from "../utils/jwt.ts";
 
 export interface AuthRequest extends Request {
     user?: any;
 }
 
-const authenticateToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
+const authenticateToken = async (req: AuthRequest, _: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
     const token = authHeader?.split(' ')[1];
 
     if (!token) {
-        return next(new ApiError(404, "No token provided"));
+        return next(new ApiError(401, "No token provided"));
     }
 
     try {
-        const decodedAccessToken = verifyAccessToken(token);
-        req.user = decodedAccessToken;
-        console.log("Req made by:", decodedAccessToken);
+        req.user = verifyAccessToken(token);
+        // console.log("Req made by:", decodedAccessToken);
         next();
     } catch (error) {
         return next(new ApiError(403, "Unauthorized, Invalid Token"));

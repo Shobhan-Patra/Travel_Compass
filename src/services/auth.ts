@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
-import {generateAccessToken, generateRefreshToken, verifyAccessToken, verifyRefreshToken} from "../utils/jwt.ts";
-import type {JwtPayload, LoginDTO, RegisterDTO} from "../types/auth.ts";
+import {generateAccessToken, generateRefreshToken, verifyRefreshToken} from "../utils/jwt.ts";
+import type {LoginDTO, RegisterDTO} from "../types/auth.ts";
 import {ApiError} from "../utils/apiError.ts";
 import db from "../db/db.ts";
 import { v4 as uuidv4 } from "uuid";
@@ -64,8 +64,11 @@ class AuthService {
 
         // Remove password field from user and then generate tokens
         const { password: _, ...userWithoutPassword } = user;
-        const jwtAccessToken = generateAccessToken(userWithoutPassword);
+        const jwtAccessToken = generateAccessToken({id: user.id, email: user.email});
         const jwtRefreshToken = generateRefreshToken({id: user.id, email: user.email});
+
+        await db.query(`UPDATE users SET refreshtoken = $1 WHERE id = $2`,
+            [jwtRefreshToken, user.id])
 
         return {
             accessToken: jwtAccessToken,
@@ -74,14 +77,13 @@ class AuthService {
         }
     }
 
-    async logout(token: string) {
-        if (!token) {
-            throw new ApiError(401, "No token provided");
+    async logout(userId: string) {
+        if (!userId) {
+            throw new ApiError(400, "User ID is required");
         }
 
-        const decodedToken = verifyAccessToken(token);
-
-        await db.query("DELETE FROM users WHERE id = $1", [decodedToken.id]);
+        await db.query("UPDATE users SET refreshtoken = NULL WHERE id = $1",
+            [userId]);
 
         return null;
     }
@@ -91,7 +93,11 @@ class AuthService {
             throw new ApiError(401, "Refresh token is required");
         }
 
-        const decoded = verifyRefreshToken(incomingRefreshToken);
+        try {
+            verifyRefreshToken(incomingRefreshToken);
+        } catch (error) {
+            throw new ApiError(401, "Invalid refresh token");
+        }
 
         const userResult = await db.query(`SELECT id, username, email FROM users WHERE refreshtoken = ($1)`,
             [incomingRefreshToken]);
@@ -99,15 +105,17 @@ class AuthService {
         if (userResult.rows.length === 0) {
             throw new ApiError(403, "Invalid refresh token (Reuse detected)");
         }
+
         const user = userResult.rows[0];
         const jwtAccessToken = generateAccessToken({id: user.id, email: user.email});
         const jwtRefreshToken = generateRefreshToken({id: user.id, email: user.email});
 
-        await db.query("UPDATE users SET refreshToken = $1 WHERE id = $2", [jwtRefreshToken, user.id]);
+        await db.query("UPDATE users SET refreshToken = $1 WHERE id = $2",
+            [jwtRefreshToken, user.id]);
 
         return {
             accessToken: jwtAccessToken,
-            verifyRefreshToken: jwtRefreshToken,
+            refreshToken: jwtRefreshToken,
             user: {id: user.id, email: user.email, username: user.username},
         }
     }
