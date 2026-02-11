@@ -4,17 +4,12 @@ import type {LoginDTO, RegisterDTO} from "../types/auth.ts";
 import {ApiError} from "../utils/apiError.ts";
 import db from "../db/db.ts";
 import { v4 as uuidv4 } from "uuid";
+import handleDbErrors from "../utils/dbErrorHandler.ts";
 
 class AuthService {
     async register({username, email, password}: RegisterDTO) {
         if (!username || !email || !password) {
             throw new ApiError(400, "Email and password are required");
-        }
-
-        // Check if the user already exists
-        const existingUser: any = await db.query(`SELECT id FROM users WHERE email = $1`, [email]);
-        if (existingUser.rows.length > 0) {
-            throw new ApiError(400, "An account with the same email already exists");
         }
 
         // Make an UserId, hash password, and generate tokens
@@ -25,15 +20,16 @@ class AuthService {
         const jwtRefreshToken = generateRefreshToken({id: userId, email: email});
 
         // Insert user details into DB
-        const query = `
+        let result;
+        try {
+            const query = `
             INSERT INTO users (id, username, email, password, refreshtoken) 
             VALUES ($1, $2, $3, $4, $5) 
             RETURNING id, username, email
         `;
-        const result = await db.query(query, [userId, username, email, hashedPassword, jwtRefreshToken]);
-
-        if (result.rows.length === 0) {
-            throw new ApiError(400, "Failed to create new user");
+            result = await db.query(query, [userId, username, email, hashedPassword, jwtRefreshToken]);
+        } catch (error) {
+            throw handleDbErrors(error);
         }
 
         return {
@@ -49,17 +45,17 @@ class AuthService {
         }
 
         // Check if the user exists
-        const existingUser = await db.query(`SELECT * FROM users WHERE email = $1`,
+        const existingUser = await db.query(`SELECT id, username, email, password, is_native FROM users WHERE email = $1`,
             [email]);
         if (existingUser.rows.length === 0) {
-            throw new ApiError(404, "Invalid credentials");
+            throw new ApiError(401, "Invalid credentials");
         }
 
         // Compare password hashes
         const user = existingUser.rows[0];
         const isPasswordCorrect = await bcrypt.compare(password, user.password);
         if (!isPasswordCorrect) {
-            throw new ApiError(401, "Invalid password");
+            throw new ApiError(401, "Invalid credentials");
         }
 
         // Remove password field from user and then generate tokens
@@ -82,8 +78,12 @@ class AuthService {
             throw new ApiError(400, "User ID is required");
         }
 
-        await db.query("UPDATE users SET refreshtoken = NULL WHERE id = $1",
-            [userId]);
+        try {
+            await db.query("UPDATE users SET refreshtoken = NULL WHERE id = $1",
+                [userId]);
+        } catch (error) {
+            throw handleDbErrors(error);
+        }
 
         return null;
     }
@@ -110,7 +110,7 @@ class AuthService {
         const jwtAccessToken = generateAccessToken({id: user.id, email: user.email});
         const jwtRefreshToken = generateRefreshToken({id: user.id, email: user.email});
 
-        await db.query("UPDATE users SET refreshToken = $1 WHERE id = $2",
+        await db.query("UPDATE users SET refreshtoken = $1 WHERE id = $2",
             [jwtRefreshToken, user.id]);
 
         return {

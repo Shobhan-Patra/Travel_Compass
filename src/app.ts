@@ -1,6 +1,6 @@
 import express from "express";
 import {errorHandler} from "./middlewares/errorHandler.ts";
-// import authenticateToken, {type AuthRequest} from "./middlewares/auth.ts";
+import authenticateToken from "./middlewares/auth.ts";
 
 const app = express();
 
@@ -14,9 +14,14 @@ app.get("/", (_: express.Request, res: express.Response) => {
 })
 
 import userRouter from "./routes/user.ts";
+import postRouter from "./routes/post.ts";
+import destinationRouter from "./routes/destination.ts";
 
 app.use("/api/v1/user", userRouter);
-// app.use('/api/v1', authenticateToken);
+
+app.use('/api/v1', authenticateToken);
+app.use('/api/v1/post', postRouter);
+app.use('/api/v1/destination', destinationRouter);
 
 app.use(errorHandler);
 
